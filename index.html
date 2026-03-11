@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEX Implementation Roadmap | GE Aerospace Service Governance</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & ROOT
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0e14;--bg2:#111622;--bg3:#161d2e;--bg4:#1c2540;
+  --surface:#1a2235;--surface2:#222d44;
+  --border:#2a3654;--border2:#354466;
+  --text:#e8ecf4;--text2:#a3b1cc;--text3:#6b7fa3;
+  --accent:#3b82f6;--accent2:#60a5fa;--accent-glow:rgba(59,130,246,.15);
+  --green:#10b981;--green2:#34d399;--green-bg:rgba(16,185,129,.08);
+  --orange:#f59e0b;--orange2:#fbbf24;--orange-bg:rgba(245,158,11,.08);
+  --red:#ef4444;--red2:#f87171;--red-bg:rgba(239,68,68,.08);
+  --purple:#8b5cf6;--purple2:#a78bfa;--purple-bg:rgba(139,92,246,.08);
+  --cyan:#06b6d4;--cyan2:#22d3ee;--cyan-bg:rgba(6,182,212,.08);
+  --gradient:linear-gradient(135deg,#3b82f6,#8b5cf6);
+  --radius:12px;--radius-lg:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.3);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.4);
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --max-w:1280px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--accent2);text-decoration:none;transition:color .2s}
+a:hover{color:var(--text)}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,14,20,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
+.nav.scrolled{box-shadow:0 4px 30px rgba(0,0,0,.5)}
+.nav-inner{max-width:var(--max-w);margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:.75rem 2rem}
+.nav-brand{font-weight:800;font-size:1.1rem;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
+.nav-links{display:flex;gap:.25rem;flex-wrap:wrap}
+.nav-links a{padding:.4rem .8rem;border-radius:8px;font-size:.8rem;font-weight:500;color:var(--text2);transition:all .2s}
+.nav-links a:hover,.nav-links a.active{background:var(--accent-glow);color:var(--accent2)}
+.nav-toggle{display:none;background:none;border:none;color:var(--text);font-size:1.5rem;cursor:pointer}
+@media(max-width:768px){
+  .nav-links{display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);padding:1rem;flex-direction:column;border-bottom:1px solid var(--border)}
+  .nav-links.open{display:flex}
+  .nav-toggle{display:block}
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.container{max-width:var(--max-w);margin:0 auto;padding:0 2rem}
+section{padding:5rem 0}
+section:first-of-type{padding-top:7rem}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{min-height:90vh;display:flex;align-items:center;position:relative;overflow:hidden;padding-top:5rem}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 20%,rgba(59,130,246,.08) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(139,92,246,.06) 0%,transparent 50%);animation:heroPulse 15s ease-in-out infinite alternate}
+@keyframes heroPulse{0%{transform:scale(1) rotate(0)}100%{transform:scale(1.05) rotate(2deg)}}
+.hero-content{position:relative;z-index:1;max-width:900px}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;background:var(--accent-glow);border:1px solid rgba(59,130,246,.2);border-radius:100px;font-size:.8rem;font-weight:600;color:var(--accent2);margin-bottom:1.5rem;letter-spacing:.05em;text-transform:uppercase}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;line-height:1.1;letter-spacing:-.03em;margin-bottom:1.5rem}
+.hero h1 .gradient{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.2rem;color:var(--text2);max-width:650px;margin-bottom:2rem}
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1.5rem;margin-top:3rem}
+.hero-stat{padding:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);text-align:center}
+.hero-stat .number{font-size:2rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-stat .label{font-size:.8rem;color:var(--text3);margin-top:.25rem;text-transform:uppercase;letter-spacing:.05em}
+
+/* ============================================================
+   SECTION HEADERS
+   ============================================================ */
+.section-header{text-align:center;max-width:700px;margin:0 auto 3.5rem}
+.section-header .overline{display:inline-block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent2);margin-bottom:.75rem;padding:.3rem .8rem;background:var(--accent-glow);border-radius:100px}
+.section-header h2{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-.02em;margin-bottom:.75rem}
+.section-header p{color:var(--text2);font-size:1.05rem}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;transition:all .3s;position:relative;overflow:hidden}
+.card:hover{border-color:var(--accent);box-shadow:0 0 30px var(--accent-glow);transform:translateY(-2px)}
+.card-grid{display:grid;gap:1.5rem}
+.card-grid-2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card-grid-3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+
+/* ============================================================
+   TOOL COMPARISON CARDS
+   ============================================================ */
+.tool-card{position:relative}
+.tool-card .tool-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+.tool-card .tool-icon{width:56px;height:56px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;flex-shrink:0}
+.tool-card .tool-name{font-size:1.3rem;font-weight:700}
+.tool-card .tool-tagline{font-size:.85rem;color:var(--text3);margin-top:.15rem}
+.tool-card .tool-badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem}
+.tool-badge{padding:.2rem .65rem;border-radius:100px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.badge-leader{background:var(--green-bg);color:var(--green2);border:1px solid rgba(16,185,129,.2)}
+.badge-challenger{background:var(--orange-bg);color:var(--orange2);border:1px solid rgba(245,158,11,.2)}
+.badge-visionary{background:var(--purple-bg);color:var(--purple2);border:1px solid rgba(139,92,246,.2)}
+.badge-niche{background:var(--cyan-bg);color:var(--cyan2);border:1px solid rgba(6,182,212,.2)}
+.badge-new{background:var(--red-bg);color:var(--red2);border:1px solid rgba(239,68,68,.2)}
+
+.tool-section{margin-bottom:1.25rem}
+.tool-section h4{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:.5rem;font-weight:600}
+.tool-section ul{list-style:none;padding:0}
+.tool-section li{position:relative;padding-left:1.25rem;margin-bottom:.35rem;font-size:.9rem;color:var(--text2)}
+.tool-section li::before{content:'›';position:absolute;left:0;color:var(--accent2);font-weight:700}
+
+.pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.pros h4,.cons h4{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;font-weight:700}
+.pros h4{color:var(--green2)}
+.cons h4{color:var(--red2)}
+.pros li::before{content:'✓';color:var(--green2)}
+.cons li::before{content:'✗';color:var(--red2)}
+@media(max-width:500px){.pros-cons{grid-template-columns:1fr}}
+
+/* ============================================================
+   COMPARISON TABLE
+   ============================================================ */
+.table-wrapper{overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface)}
+.comp-table{width:100%;border-collapse:collapse;min-width:900px;font-size:.85rem}
+.comp-table th{background:var(--bg3);padding:1rem;text-align:left;font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);position:sticky;top:0;border-bottom:2px solid var(--border)}
+.comp-table td{padding:.85rem 1rem;border-bottom:1px solid var(--border);vertical-align:top}
+.comp-table tr:hover td{background:rgba(59,130,246,.03)}
+.comp-table .feature-name{font-weight:600;color:var(--text);min-width:180px}
+.rating{display:inline-flex;align-items:center;gap:.35rem}
+.rating .dot{width:8px;height:8px;border-radius:50%}
+.dot-green{background:var(--green)}
+.dot-yellow{background:var(--orange)}
+.dot-red{background:var(--red)}
+.dot-gray{background:var(--text3)}
+.check{color:var(--green2);font-weight:700}
+.cross{color:var(--red2);font-weight:700}
+.partial{color:var(--orange2);font-weight:700}
+
+/* ============================================================
+   COLLAPSIBLE
+   ============================================================ */
+.collapsible{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.75rem;overflow:hidden;background:var(--surface)}
+.collapsible-header{padding:1.25rem 1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:1rem;transition:background .2s;user-select:none}
+.collapsible-header:hover{background:var(--bg3)}
+.collapsible-header .icon{font-size:1.2rem;transition:transform .3s;color:var(--text3)}
+.collapsible.open .collapsible-header .icon{transform:rotate(180deg)}
+.collapsible-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.collapsible.open .collapsible-body{max-height:3000px}
+.collapsible-content{padding:0 1.5rem 1.5rem}
+.collapsible-content p,.collapsible-content li{font-size:.9rem;color:var(--text2)}
+.collapsible-content ul{padding-left:1.25rem}
+.collapsible-content li{margin-bottom:.3rem}
+
+/* ============================================================
+   ROADMAP TIMELINE
+   ============================================================ */
+.timeline{position:relative;padding:2rem 0}
+.timeline::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--accent),var(--purple),var(--green));border-radius:10px;transform:translateX(-50%)}
+.timeline-item{position:relative;width:50%;padding:0 3rem 3rem}
+.timeline-item:nth-child(odd){margin-left:0;text-align:right;padding-right:3rem;padding-left:0}
+.timeline-item:nth-child(even){margin-left:50%;text-align:left;padding-left:3rem;padding-right:0}
+.timeline-dot{position:absolute;top:.5rem;width:20px;height:20px;border-radius:50%;border:3px solid;z-index:2}
+.timeline-item:nth-child(odd) .timeline-dot{right:-10px}
+.timeline-item:nth-child(even) .timeline-dot{left:-10px}
+.timeline-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;text-align:left;transition:all .3s}
+.timeline-card:hover{border-color:var(--accent);box-shadow:0 0 30px var(--accent-glow)}
+.timeline-year{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem}
+.timeline-title{font-size:1.2rem;font-weight:700;margin-bottom:.75rem}
+.timeline-card ul{list-style:none;padding:0}
+.timeline-card li{position:relative;padding-left:1.25rem;margin-bottom:.4rem;font-size:.85rem;color:var(--text2)}
+.timeline-card li::before{content:'▸';position:absolute;left:0;font-weight:700}
+@media(max-width:768px){
+  .timeline::before{left:20px}
+  .timeline-item,.timeline-item:nth-child(odd),.timeline-item:nth-child(even){width:100%;margin-left:0;text-align:left;padding-left:3.5rem;padding-right:0}
+  .timeline-item:nth-child(odd) .timeline-dot,.timeline-item:nth-child(even) .timeline-dot{left:10px;right:auto}
+}
+
+/* ============================================================
+   IMPLEMENTATION CARDS
+   ============================================================ */
+.impl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem}
+.impl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;transition:all .3s}
+.impl-card:hover{border-color:var(--accent)}
+.impl-card h4{font-size:1rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.impl-card .metric{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem}
+.impl-card .metric:last-child{border-bottom:none}
+.impl-card .metric .label{color:var(--text3)}
+.impl-card .metric .value{font-weight:600;color:var(--text)}
+
+/* ============================================================
+   MARKET CHARTS (CSS)
+   ============================================================ */
+.chart-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;margin-bottom:2rem}
+.chart-title{font-size:1rem;font-weight:700;margin-bottom:1.5rem;text-align:center}
+.bar-chart{display:flex;align-items:flex-end;gap:.75rem;height:220px;padding:0 .5rem}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:.25rem;height:100%;justify-content:flex-end}
+.bar{width:100%;max-width:60px;border-radius:6px 6px 0 0;transition:height .8s ease;position:relative}
+.bar-label{font-size:.65rem;color:var(--text3);text-align:center;font-weight:600;margin-top:.35rem}
+.bar-value{font-size:.7rem;font-weight:700;color:var(--text);margin-bottom:.15rem;text-align:center}
+
+.donut-chart{display:flex;justify-content:center;align-items:center;gap:3rem;flex-wrap:wrap;margin:1rem 0}
+.donut-svg{width:180px;height:180px}
+.donut-legend{display:flex;flex-direction:column;gap:.5rem}
+.legend-item{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+
+/* ============================================================
+   KPI GRID
+   ============================================================ */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem;margin:2rem 0}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center;transition:all .3s}
+.kpi:hover{border-color:var(--accent);transform:translateY(-2px)}
+.kpi .kpi-value{font-size:2rem;font-weight:800;margin-bottom:.25rem}
+.kpi .kpi-label{font-size:.8rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.kpi .kpi-sub{font-size:.75rem;color:var(--text3);margin-top:.25rem}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+.tabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.75rem}
+.tab-btn{padding:.5rem 1.25rem;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;font-family:var(--font)}
+.tab-btn:hover{border-color:var(--accent);color:var(--text)}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{border-top:1px solid var(--border);padding:3rem 0;text-align:center}
+footer p{color:var(--text3);font-size:.85rem}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.text-accent{color:var(--accent2)}
+.text-green{color:var(--green2)}
+.text-orange{color:var(--orange2)}
+.text-red{color:var(--red2)}
+.text-purple{color:var(--purple2)}
+.text-cyan{color:var(--cyan2)}
+.mt-1{margin-top:.5rem}.mt-2{margin-top:1rem}.mt-3{margin-top:1.5rem}.mt-4{margin-top:2rem}
+.mb-1{margin-bottom:.5rem}.mb-2{margin-bottom:1rem}.mb-3{margin-bottom:1.5rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+</style>
+</head>
+<body>
+
+<!-- ==================== NAVIGATION ==================== -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">DEX Roadmap</div>
+    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">☰</button>
+    <div class="nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#market">Market</a>
+      <a href="#tools">Tools</a>
+      <a href="#comparison">Compare</a>
+      <a href="#implementation">Deploy</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#roi">ROI</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="overview">
+<div class="container">
+  <div class="hero-content">
+    <div class="hero-badge">⚡ Strategic Initiative 2026–2030</div>
+    <h1>Digital Employee<br><span class="gradient">Experience Roadmap</span></h1>
+    <p>A comprehensive analysis of DEX platforms, market dynamics, and a 5-year implementation strategy for enterprise-scale digital workplace transformation at GE Aerospace.</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="number">$1.15B</div>
+        <div class="label">Market Size 2025</div>
+      </div>
+      <div class="hero-stat">
+        <div class="number">18%</div>
+        <div class="label">CAGR Growth</div>
+      </div>
+      <div class="hero-stat">
+        <div class="number">$400</div>
+        <div class="label">Savings/Endpoint Yr1</div>
+      </div>
+      <div class="hero-stat">
+        <div class="number">7</div>
+        <div class="label">Tools Evaluated</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== MARKET OVERVIEW ==================== -->
+<section id="market">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Market Intelligence</span>
+    <h2>The DEX Market is Exploding</h2>
+    <p>Digital Employee Experience Management is one of the fastest-growing segments in enterprise IT, projected to reach $4.25B by 2033.</p>
+  </div>
+
+  <!-- Market Size Chart -->
+  <div class="chart-container fade-in">
+    <div class="chart-title">DEX Market Size Projection (USD Billions)</div>
+    <div class="bar-chart" id="marketChart">
+      <div class="bar-group">
+        <div class="bar-value">$0.82B</div>
+        <div class="bar" style="height:19%;background:var(--accent)"></div>
+        <div class="bar-label">2023</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$0.97B</div>
+        <div class="bar" style="height:23%;background:var(--accent)"></div>
+        <div class="bar-label">2024</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$1.15B</div>
+        <div class="bar" style="height:27%;background:var(--accent2)"></div>
+        <div class="bar-label">2025</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$1.36B</div>
+        <div class="bar" style="height:32%;background:linear-gradient(to top,var(--accent),var(--purple))"></div>
+        <div class="bar-label">2026</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$1.60B</div>
+        <div class="bar" style="height:38%;background:linear-gradient(to top,var(--accent),var(--purple))"></div>
+        <div class="bar-label">2027</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$1.89B</div>
+        <div class="bar" style="height:44%;background:linear-gradient(to top,var(--accent),var(--purple))"></div>
+        <div class="bar-label">2028</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$2.23B</div>
+        <div class="bar" style="height:52%;background:linear-gradient(to top,var(--accent),var(--purple))"></div>
+        <div class="bar-label">2029</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$2.63B</div>
+        <div class="bar" style="height:62%;background:linear-gradient(to top,var(--purple),var(--green))"></div>
+        <div class="bar-label">2030</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$3.10B</div>
+        <div class="bar" style="height:73%;background:linear-gradient(to top,var(--purple),var(--green))"></div>
+        <div class="bar-label">2031</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$3.66B</div>
+        <div class="bar" style="height:86%;background:linear-gradient(to top,var(--purple),var(--green))"></div>
+        <div class="bar-label">2032</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-value">$4.25B</div>
+        <div class="bar" style="height:100%;background:linear-gradient(to top,var(--green),var(--green2))"></div>
+        <div class="bar-label">2033</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Trends -->
+  <div class="kpi-grid fade-in">
+    <div class="kpi">
+      <div class="kpi-value text-green">17.8%</div>
+      <div class="kpi-label">CAGR 2025–2033</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value text-accent">85%</div>
+      <div class="kpi-label">Orgs Investing in DEX by 2027</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value text-purple">42%</div>
+      <div class="kpi-label">Ticket Volume Reduction</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value text-orange">$400</div>
+      <div class="kpi-label">Avg Savings per Endpoint/Yr</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value text-cyan">30%</div>
+      <div class="kpi-label">Productivity Improvement</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value text-red">3.2x</div>
+      <div class="kpi-label">Faster Issue Resolution</div>
+    </div>
+  </div>
+
+  <!-- Market Trends Collapsibles -->
+  <div class="mt-4 fade-in">
+    <div class="collapsible">
+      <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
+        <span>📈 Key Market Trends 2025–2026</span>
+        <span class="icon">▼</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="collapsible-content">
+          <ul>
+            <li><strong>Agentic AI Integration:</strong> DEX vendors are rapidly incorporating AI agents for autonomous remediation. Lakeside launched "SysTrack AI" (Nov 2025) with agentic DEX capabilities. Riverbed added "Aternity Self-Service" powered by agentic AI for autonomous issue resolution.</li>
+            <li><strong>M&A Consolidation:</strong> TeamViewer acquired 1E for $720M (closed early 2025), signaling market maturity and vendor consolidation. Nexthink acquired AppLearn (digital adoption) in January 2024.</li>
+            <li><strong>XLAs over SLAs:</strong> Organizations are shifting from Service Level Agreements to Experience Level Agreements (XLAs) that measure actual employee satisfaction rather than just uptime metrics.</li>
+            <li><strong>DEX-pansion Beyond IT:</strong> Forrester notes DEX tools expanding into HR, cybersecurity, facilities management, and operational technology (OT) monitoring.</li>
+            <li><strong>Mobile DEX:</strong> Riverbed Aternity Mobile offers multivendor mobile device, application, and networking monitoring — one of the only dedicated mobile DEX solutions.</li>
+            <li><strong>Digital Adoption Platforms (DAP):</strong> Convergence of DEX and DAP categories as vendors add in-app guidance and adoption analytics.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
+        <span>🏆 2025 Gartner Magic Quadrant — Leaders</span>
+        <span class="icon">▼</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="collapsible-content">
+          <p class="mb-2">The 2025 Gartner® Magic Quadrant™ for Digital Employee Experience Management Tools (published May 2025) recognized the following <strong>Leaders</strong>:</p>
+          <ul>
+            <li><strong>Nexthink</strong> — Leader for 2nd consecutive year. Ranked #1 across all 5 use cases in Gartner Critical Capabilities report.</li>
+            <li><strong>Lakeside Software (SysTrack)</strong> — Leader for 2nd consecutive year. First AI-driven DEX company with agentic capabilities.</li>
+            <li><strong>ControlUp</strong> — Leader for 2nd consecutive year. Also named Gartner Peer Insights Customers' Choice.</li>
+            <li><strong>Riverbed (Aternity)</strong> — Leader for 2nd consecutive year. Strong in DXI benchmarking and network integration.</li>
+            <li><strong>TeamViewer (incl. 1E)</strong> — Named Leader following 1E acquisition. Combined remote + DEX platform.</li>
+            <li><strong>Omnissa</strong> — Leader recognized for completeness of vision (spun off from Broadcom/VMware).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
+        <span>🔬 Forrester Perspective: The Great "DEX-pansion" of 2025</span>
+        <span class="icon">▼</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="collapsible-content">
+          <p class="mb-2">Forrester Research highlights several key themes for 2025–2026:</p>
+          <ul>
+            <li>DEX tools are evolving to <strong>holistically understand</strong> the full digital employee experience, not just endpoint health.</li>
+            <li>The gap between <strong>IT's perception and employee reality</strong> remains wide — Ivanti's 2025 DEX Report shows organizations overestimate their DEX maturity.</li>
+            <li>Vendors are adding <strong>sentiment monitoring, digital adoption</strong>, and <strong>business outcome correlation</strong> to move beyond simple monitoring.</li>
+            <li>The market is poised for <strong>deeper integration with ITSM platforms</strong> like ServiceNow, creating closed-loop remediation workflows.</li>
+            <li>Forrester TEI studies show <strong>ROI of 200%+</strong> within 3 years for properly deployed DEX solutions.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== TOOL DEEP DIVES ==================== -->
+<section id="tools" style="background:var(--bg2)">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Tool Analysis</span>
+    <h2>Platform Deep Dives</h2>
+    <p>Detailed analysis of the leading DEX platforms, their capabilities, architectures, and fit for enterprise deployment.</p>
+  </div>
+
+  <div class="card-grid card-grid-2">
+
+    <!-- Nexthink -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#0066cc,#00aaff)">N</div>
+        <div>
+          <div class="tool-name">Nexthink</div>
+          <div class="tool-tagline">The DEX Market Leader</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-leader">Gartner Leader</span>
+        <span class="tool-badge badge-leader">#1 Critical Capabilities</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>Unified DEX data layer with complete observability</li>
+          <li>DEX Score V3 with advanced memory metrics</li>
+          <li>Real-time discovery, diagnosis, and automation at scale</li>
+          <li>Nexthink Engage (employee sentiment surveys)</li>
+          <li>Nexthink Act (automated remediation campaigns)</li>
+          <li>AppLearn integration for digital adoption</li>
+          <li>Live Dashboards with breakdown analytics</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud-native SaaS platform (also hybrid available)</li>
+          <li>Lightweight endpoint agent (Windows, macOS, VDI)</li>
+          <li>Collector → Engine → Portal architecture</li>
+          <li>RESTful API ecosystem with extensive integrations</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Per-endpoint, per-year subscription</li>
+          <li>Tiered modules: Experience, Act, Engage</li>
+          <li>Enterprise discounts for large deployments (50K+)</li>
+          <li>Estimated: $15–30/endpoint/year (varies by volume)</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Deepest analytics and diagnostics</li>
+            <li>#1 in every Gartner use case</li>
+            <li>Strongest remediation engine</li>
+            <li>Best-in-class ServiceNow integration</li>
+            <li>Largest customer base (~1,200+ enterprises)</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>Premium pricing vs competitors</li>
+            <li>Complex initial deployment</li>
+            <li>Steep learning curve for NQL</li>
+            <li>Limited mobile endpoint support</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lakeside SysTrack -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#1a7c42,#2dd267)">L</div>
+        <div>
+          <div class="tool-name">Lakeside SysTrack</div>
+          <div class="tool-tagline">AI-Driven Analytics Pioneer</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-leader">Gartner Leader</span>
+        <span class="tool-badge badge-new">SysTrack AI (2025)</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>10,000+ data points collected every 15 seconds</li>
+          <li>SysTrack AI with agentic DEX capabilities</li>
+          <li>3-year historical data retention for trend analysis</li>
+          <li>Intelligent Edge agent architecture</li>
+          <li>VDI/DaaS optimization (Citrix, VMware, AVD)</li>
+          <li>Intel NPU telemetry integration</li>
+          <li>Workspace planning and right-sizing</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud-hosted and on-premises options</li>
+          <li>Intelligent Edge agent (Windows, macOS, Linux, VDI)</li>
+          <li>SQL Server-based data warehouse</li>
+          <li>RESTful API + Power BI connectors</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Per-endpoint annual subscription</li>
+          <li>Contact vendor for pricing (not publicly disclosed)</li>
+          <li>Estimated: $12–25/endpoint/year</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Deepest historical data (3 years)</li>
+            <li>Excellent for workspace planning/VDI</li>
+            <li>Strong AI/ML capabilities</li>
+            <li>Best data granularity in market</li>
+            <li>Linux endpoint support</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>Agent instability reported (G2)</li>
+            <li>Data compression can lose detail</li>
+            <li>Smaller partner ecosystem</li>
+            <li>UI less modern than competitors</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ControlUp -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#ff6b00,#ff9500)">C</div>
+        <div>
+          <div class="tool-name">ControlUp</div>
+          <div class="tool-tagline">Unified DEX Platform</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-leader">Gartner Leader</span>
+        <span class="tool-badge badge-leader">Customers' Choice</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>ControlUp ONE: unified monitoring + remediation + AI</li>
+          <li>24/7 autonomous remediation engine</li>
+          <li>DEX telemetry for endpoints, VDI, apps, networks</li>
+          <li>ControlUp for Apps — SaaS/web app monitoring (2025)</li>
+          <li>AI-powered support and diagnostics</li>
+          <li>Real-time and historical analysis</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud-native SaaS platform</li>
+          <li>Agentless + agent-based hybrid model</li>
+          <li>Strong VDI/Citrix/VMware specialization</li>
+          <li>API-first design with extensive integrations</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Per-endpoint/per-session subscription</li>
+          <li>Tiered: Edge DX, ControlUp ONE</li>
+          <li>Estimated: $10–22/endpoint/year</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Fastest time-to-value (rapid deployment)</li>
+            <li>Best VDI/DaaS monitoring</li>
+            <li>Highest customer satisfaction (Gartner)</li>
+            <li>New SaaS app monitoring capability</li>
+            <li>Intuitive UI/UX</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>VDI-heavy heritage (maturing for physical)</li>
+            <li>Smaller enterprise reference base</li>
+            <li>Less mature ITSM integrations</li>
+            <li>Limited macOS depth vs competitors</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Riverbed Aternity -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#0055a5,#00a0d2)">R</div>
+        <div>
+          <div class="tool-name">Riverbed Aternity</div>
+          <div class="tool-tagline">Full-Stack Observability DEX</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-leader">Gartner Leader</span>
+        <span class="tool-badge badge-new">Agentic AI (2025)</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>DXI (Digital Experience Index) benchmarking</li>
+          <li>Aternity Self-Service powered by agentic AI</li>
+          <li>Application performance from the user perspective</li>
+          <li>Aternity Mobile — multivendor mobile DEX</li>
+          <li>Network + application + endpoint correlation</li>
+          <li>SmartOTel for OpenTelemetry integration</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud-native SaaS + hybrid deployment</li>
+          <li>Lightweight agent (Windows, macOS, mobile)</li>
+          <li>Part of Riverbed's full-stack observability suite</li>
+          <li>Rich API ecosystem + native integrations</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Per-user/per-endpoint subscription</li>
+          <li>Bundled with Riverbed NPM at discount</li>
+          <li>Estimated: $12–28/endpoint/year</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Only true mobile DEX solution</li>
+            <li>Full-stack network + endpoint visibility</li>
+            <li>Industry benchmarking (DXI)</li>
+            <li>Agentic AI self-service capabilities</li>
+            <li>Strong application performance analytics</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>Riverbed's financial history (restructuring)</li>
+            <li>Complexity of full-stack deployment</li>
+            <li>Less focused DEX (broader platform)</li>
+            <li>Agent can be resource-intensive</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- TeamViewer / 1E -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#004c97,#0071c5)">T</div>
+        <div>
+          <div class="tool-name">TeamViewer DEX (1E)</div>
+          <div class="tool-tagline">Autonomous DEX Platform</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-leader">Gartner Leader</span>
+        <span class="tool-badge badge-new">Acquired by TeamViewer 2025</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>1E Tachyon — real-time endpoint management</li>
+          <li>Self-healing endpoints with auto-remediation</li>
+          <li>Software reclaim and license optimization</li>
+          <li>DEX Score with sentiment integration</li>
+          <li>Nomad — peer-to-peer content distribution</li>
+          <li>Combined with TeamViewer remote access</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud-native + on-premises options</li>
+          <li>Tachyon agent (Windows, macOS)</li>
+          <li>Real-time instruction execution engine</li>
+          <li>Integration with SCCM/Intune/ServiceNow</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Per-endpoint subscription (modular)</li>
+          <li>Pricing restructuring post-acquisition</li>
+          <li>Estimated: $10–20/endpoint/year</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Best self-healing / auto-remediation</li>
+            <li>Software reclaim saves license costs</li>
+            <li>Real-time endpoint query engine</li>
+            <li>Peer-to-peer content delivery (Nomad)</li>
+            <li>Combined remote support + DEX</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>Post-acquisition integration uncertainty</li>
+            <li>Less mature analytics than Nexthink</li>
+            <li>Smaller DEX-specific community</li>
+            <li>Brand transition (1E → TeamViewer)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tanium DEX -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#cc0000,#ff3333)">T</div>
+        <div>
+          <div class="tool-name">Tanium DEX</div>
+          <div class="tool-tagline">Security-First DEX</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-new">New Entrant 2025</span>
+        <span class="tool-badge badge-challenger">Challenger</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>Tanium XEM with DEX — unified security + experience</li>
+          <li>Tanium Engage — employee sentiment surveys</li>
+          <li>Tanium Performance — endpoint analytics</li>
+          <li>Self-help employee remediation portal</li>
+          <li>Real-time endpoint visibility (15-second queries)</li>
+          <li>Built on proven Tanium endpoint platform</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud + on-premises (Tanium Cloud preferred)</li>
+          <li>Single agent for security + DEX + operations</li>
+          <li>Linear chain architecture for scale</li>
+          <li>Native integration with Tanium security modules</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Add-on to Tanium platform license</li>
+          <li>Attractive if already a Tanium customer</li>
+          <li>Estimated: $8–18/endpoint/year (DEX add-on)</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Unified security + DEX single agent</li>
+            <li>Leverages existing Tanium investment</li>
+            <li>Unmatched endpoint scale (500K+)</li>
+            <li>Real-time query at enterprise scale</li>
+            <li>Strong compliance integration</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>New to DEX — less mature analytics</li>
+            <li>Requires Tanium platform commitment</li>
+            <li>Limited standalone DEX capabilities</li>
+            <li>No Gartner Leader position yet</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Omnissa -->
+    <div class="card tool-card fade-in">
+      <div class="tool-header">
+        <div class="tool-icon" style="background:linear-gradient(135deg,#6b21a8,#9333ea)">O</div>
+        <div>
+          <div class="tool-name">Omnissa (ex-VMware)</div>
+          <div class="tool-tagline">Workspace ONE Intelligence</div>
+        </div>
+      </div>
+      <div class="tool-badges">
+        <span class="tool-badge badge-leader">Gartner Leader</span>
+        <span class="tool-badge badge-visionary">Strong UEM Integration</span>
+      </div>
+      <div class="tool-section">
+        <h4>Core Capabilities</h4>
+        <ul>
+          <li>Workspace ONE Intelligence — DEX analytics</li>
+          <li>Experience scoring and benchmarking</li>
+          <li>Automated workflow engine</li>
+          <li>Deep UEM integration (Workspace ONE UEM)</li>
+          <li>App analytics and crash reporting</li>
+          <li>Risk analytics and compliance</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Architecture</h4>
+        <ul>
+          <li>Cloud-native SaaS (Workspace ONE platform)</li>
+          <li>Workspace ONE agent (Windows, macOS, iOS, Android)</li>
+          <li>Built-in UEM + DEX convergence</li>
+          <li>APIs + Freestyle Orchestrator automation</li>
+        </ul>
+      </div>
+      <div class="tool-section">
+        <h4>Pricing</h4>
+        <ul>
+          <li>Bundled with Workspace ONE licensing</li>
+          <li>Intelligence is an add-on tier</li>
+          <li>Estimated: $8–15/endpoint/year (add-on)</li>
+        </ul>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Strengths</h4>
+          <ul>
+            <li>Deepest UEM + DEX integration</li>
+            <li>Best mobile endpoint coverage</li>
+            <li>Strong automation (Freestyle)</li>
+            <li>Leverages existing WS1 investment</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Limitations</h4>
+          <ul>
+            <li>Requires Workspace ONE ecosystem</li>
+            <li>Post-Broadcom spinoff uncertainty</li>
+            <li>Less granular than Nexthink/Lakeside</li>
+            <li>Analytics depth trails pure-play DEX</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== COMPARISON TABLE ==================== -->
+<section id="comparison">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Head-to-Head</span>
+    <h2>Feature Comparison Matrix</h2>
+    <p>Side-by-side comparison across critical evaluation dimensions for enterprise DEX tool selection.</p>
+  </div>
+
+  <div class="table-wrapper fade-in">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>Nexthink</th>
+          <th>Lakeside</th>
+          <th>ControlUp</th>
+          <th>Aternity</th>
+          <th>TeamViewer/1E</th>
+          <th>Tanium DEX</th>
+          <th>Omnissa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature-name">Gartner Position</td>
+          <td><span class="check">Leader #1</span></td>
+          <td><span class="check">Leader</span></td>
+          <td><span class="check">Leader</span></td>
+          <td><span class="check">Leader</span></td>
+          <td><span class="check">Leader</span></td>
+          <td><span class="partial">Challenger</span></td>
+          <td><span class="check">Leader</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">DEX Scoring</td>
+          <td><span class="rating"><span class="dot dot-green"></span> V3 Advanced</span></td>
+          <td><span class="rating"><span class="dot dot-green"></span> AI-Driven</span></td>
+          <td><span class="rating"><span class="dot dot-green"></span> Comprehensive</span></td>
+          <td><span class="rating"><span class="dot dot-green"></span> DXI Index</span></td>
+          <td><span class="rating"><span class="dot dot-yellow"></span> Basic Score</span></td>
+          <td><span class="rating"><span class="dot dot-yellow"></span> Emerging</span></td>
+          <td><span class="rating"><span class="dot dot-yellow"></span> Experience Score</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Real-Time Monitoring</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span> 15s intervals</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span> Real-time</td>
+          <td><span class="check">✓</span> 15s queries</td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Auto-Remediation</td>
+          <td><span class="check">✓</span> Act campaigns</td>
+          <td><span class="check">✓</span> SysTrack AI</td>
+          <td><span class="check">✓</span> Autonomous</td>
+          <td><span class="check">✓</span> Self-Service</td>
+          <td><span class="check">✓</span> Self-healing</td>
+          <td><span class="check">✓</span> Basic</td>
+          <td><span class="check">✓</span> Freestyle</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Sentiment Surveys</td>
+          <td><span class="check">✓</span> Engage</td>
+          <td><span class="partial">◐</span> Limited</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span> Engage</td>
+          <td><span class="partial">◐</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Windows</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">macOS</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Linux</td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Mobile</td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="check">✓</span> Aternity Mobile</td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="check">✓</span> iOS/Android</td>
+        </tr>
+        <tr>
+          <td class="feature-name">VDI/DaaS</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span> Excellent</td>
+          <td><span class="check">✓</span> Best-in-class</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">ServiceNow Integration</td>
+          <td><span class="check">✓</span> Native</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">SCCM/Intune</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span> Deep</td>
+          <td><span class="check">✓</span> Native</td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">AI/ML Analytics</td>
+          <td><span class="check">✓</span> Advanced</td>
+          <td><span class="check">✓</span> SysTrack AI</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span> Agentic AI</td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Industry Benchmarking</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span> DXI</td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">◐</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Software Reclaim</td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="check">✓</span> Best-in-class</td>
+          <td><span class="partial">◐</span></td>
+          <td><span class="partial">◐</span></td>
+        </tr>
+        <tr>
+          <td class="feature-name">Deployment Time</td>
+          <td>8–16 weeks</td>
+          <td>6–14 weeks</td>
+          <td>2–6 weeks</td>
+          <td>6–12 weeks</td>
+          <td>8–14 weeks</td>
+          <td>4–8 weeks*</td>
+          <td>4–10 weeks</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Est. Price/Endpoint/Yr</td>
+          <td>$15–30</td>
+          <td>$12–25</td>
+          <td>$10–22</td>
+          <td>$12–28</td>
+          <td>$10–20</td>
+          <td>$8–18*</td>
+          <td>$8–15*</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="color:var(--text3);font-size:.75rem;margin-top:.75rem;text-align:center">* Pricing estimated for DEX add-on module. Tanium and Omnissa require base platform license. Deployment assumes existing Tanium agent.</p>
+</div>
+</section>
+
+<!-- ==================== IMPLEMENTATION DETAILS ==================== -->
+<section id="implementation" style="background:var(--bg2)">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Deployment Guide</span>
+    <h2>Implementation by Platform</h2>
+    <p>What deployment looks like for each tool — timelines, resources, pitfalls, and success metrics.</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="implTabs">
+    <button class="tab-btn active" onclick="switchTab('nexthink')">Nexthink</button>
+    <button class="tab-btn" onclick="switchTab('lakeside')">Lakeside</button>
+    <button class="tab-btn" onclick="switchTab('controlup')">ControlUp</button>
+    <button class="tab-btn" onclick="switchTab('aternity')">Aternity</button>
+    <button class="tab-btn" onclick="switchTab('teamviewer')">TeamViewer/1E</button>
+    <button class="tab-btn" onclick="switchTab('tanium')">Tanium</button>
+  </div>
+
+  <!-- Nexthink Tab -->
+  <div class="tab-content active" id="tab-nexthink">
+    <div class="impl-grid">
+      <div class="impl-card">
+        <h4>📅 Timeline</h4>
+        <div class="metric"><span class="label">POC / Pilot</span><span class="value">4–6 weeks</span></div>
+        <div class="metric"><span class="label">Phase 1 (Core)</span><span class="value">8–12 weeks</span></div>
+        <div class="metric"><span class="label">Full Rollout</span><span class="value">4–6 months</span></div>
+        <div class="metric"><span class="label">Optimization</span><span class="value">Ongoing</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>👥 Resources Required</h4>
+        <div class="metric"><span class="label">Project Manager</span><span class="value">1 FTE</span></div>
+        <div class="metric"><span class="label">Nexthink Admins</span><span class="value">2–3 FTE</span></div>
+        <div class="metric"><span class="label">ServiceNow Dev</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">Vendor PS Days</span><span class="value">20–40</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>⚠️ Common Pitfalls</h4>
+        <div class="metric"><span class="label">NQL Complexity</span><span class="value text-red">High Risk</span></div>
+        <div class="metric"><span class="label">Data Overload</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Stakeholder Buy-in</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Agent Conflicts</span><span class="value text-orange">Medium</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>📊 Success Metrics</h4>
+        <div class="metric"><span class="label">DEX Score Baseline</span><span class="value text-green">Month 2</span></div>
+        <div class="metric"><span class="label">Ticket Reduction</span><span class="value">20–40%</span></div>
+        <div class="metric"><span class="label">MTTR Improvement</span><span class="value">30–50%</span></div>
+        <div class="metric"><span class="label">ROI Breakeven</span><span class="value">8–12 months</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lakeside Tab -->
+  <div class="tab-content" id="tab-lakeside">
+    <div class="impl-grid">
+      <div class="impl-card">
+        <h4>📅 Timeline</h4>
+        <div class="metric"><span class="label">POC / Pilot</span><span class="value">3–5 weeks</span></div>
+        <div class="metric"><span class="label">Phase 1 (Core)</span><span class="value">6–10 weeks</span></div>
+        <div class="metric"><span class="label">Full Rollout</span><span class="value">3–5 months</span></div>
+        <div class="metric"><span class="label">Historical Baseline</span><span class="value">30+ days data</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>👥 Resources Required</h4>
+        <div class="metric"><span class="label">Project Manager</span><span class="value">1 FTE</span></div>
+        <div class="metric"><span class="label">SysTrack Admins</span><span class="value">1–2 FTE</span></div>
+        <div class="metric"><span class="label">DBA (SQL Server)</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">Vendor PS Days</span><span class="value">15–30</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>⚠️ Common Pitfalls</h4>
+        <div class="metric"><span class="label">Agent Stability</span><span class="value text-red">Known Issue</span></div>
+        <div class="metric"><span class="label">SQL Server Sizing</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Data Volume</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Server Restarts</span><span class="value text-red">Reported</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>📊 Success Metrics</h4>
+        <div class="metric"><span class="label">Workspace Rightsizing</span><span class="value text-green">Month 3</span></div>
+        <div class="metric"><span class="label">VDI Optimization</span><span class="value">15–30%</span></div>
+        <div class="metric"><span class="label">Asset Savings</span><span class="value">$200+/device</span></div>
+        <div class="metric"><span class="label">ROI Breakeven</span><span class="value">6–10 months</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ControlUp Tab -->
+  <div class="tab-content" id="tab-controlup">
+    <div class="impl-grid">
+      <div class="impl-card">
+        <h4>📅 Timeline</h4>
+        <div class="metric"><span class="label">POC / Pilot</span><span class="value">1–2 weeks</span></div>
+        <div class="metric"><span class="label">Phase 1 (Core)</span><span class="value">2–4 weeks</span></div>
+        <div class="metric"><span class="label">Full Rollout</span><span class="value">1–3 months</span></div>
+        <div class="metric"><span class="label">Fastest to Value</span><span class="value text-green">✓</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>👥 Resources Required</h4>
+        <div class="metric"><span class="label">Project Lead</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">ControlUp Admin</span><span class="value">1 FTE</span></div>
+        <div class="metric"><span class="label">VDI Specialist</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">Vendor PS Days</span><span class="value">5–15</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>⚠️ Common Pitfalls</h4>
+        <div class="metric"><span class="label">VDI Bias</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Physical EP Gaps</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Scaling Complexity</span><span class="value text-yellow">Low</span></div>
+        <div class="metric"><span class="label">ITSM Maturity</span><span class="value text-orange">Medium</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>📊 Success Metrics</h4>
+        <div class="metric"><span class="label">Time to First Value</span><span class="value text-green">Week 1</span></div>
+        <div class="metric"><span class="label">VDI Performance</span><span class="value">25–40% ↑</span></div>
+        <div class="metric"><span class="label">Login Times</span><span class="value">50% ↓</span></div>
+        <div class="metric"><span class="label">ROI Breakeven</span><span class="value">3–6 months</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aternity Tab -->
+  <div class="tab-content" id="tab-aternity">
+    <div class="impl-grid">
+      <div class="impl-card">
+        <h4>📅 Timeline</h4>
+        <div class="metric"><span class="label">POC / Pilot</span><span class="value">3–4 weeks</span></div>
+        <div class="metric"><span class="label">Phase 1 (Core)</span><span class="value">6–10 weeks</span></div>
+        <div class="metric"><span class="label">Full Rollout</span><span class="value">3–5 months</span></div>
+        <div class="metric"><span class="label">Network Integration</span><span class="value">+4 weeks</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>👥 Resources Required</h4>
+        <div class="metric"><span class="label">Project Manager</span><span class="value">1 FTE</span></div>
+        <div class="metric"><span class="label">Aternity Admins</span><span class="value">1–2 FTE</span></div>
+        <div class="metric"><span class="label">Network Engineer</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">Vendor PS Days</span><span class="value">15–25</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>⚠️ Common Pitfalls</h4>
+        <div class="metric"><span class="label">Agent Resource Use</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Full-Stack Scope</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Vendor Stability</span><span class="value text-orange">Monitor</span></div>
+        <div class="metric"><span class="label">Configuration</span><span class="value text-orange">Medium</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>📊 Success Metrics</h4>
+        <div class="metric"><span class="label">DXI Baseline</span><span class="value text-green">Month 2</span></div>
+        <div class="metric"><span class="label">App Perf Visibility</span><span class="value">Full Stack</span></div>
+        <div class="metric"><span class="label">Mobile Coverage</span><span class="value">Unique</span></div>
+        <div class="metric"><span class="label">ROI Breakeven</span><span class="value">8–14 months</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TeamViewer/1E Tab -->
+  <div class="tab-content" id="tab-teamviewer">
+    <div class="impl-grid">
+      <div class="impl-card">
+        <h4>📅 Timeline</h4>
+        <div class="metric"><span class="label">POC / Pilot</span><span class="value">4–6 weeks</span></div>
+        <div class="metric"><span class="label">Phase 1 (Tachyon)</span><span class="value">8–12 weeks</span></div>
+        <div class="metric"><span class="label">Full Rollout</span><span class="value">4–6 months</span></div>
+        <div class="metric"><span class="label">Self-Healing Active</span><span class="value">Month 3–4</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>👥 Resources Required</h4>
+        <div class="metric"><span class="label">Project Manager</span><span class="value">1 FTE</span></div>
+        <div class="metric"><span class="label">1E/TV Admins</span><span class="value">2 FTE</span></div>
+        <div class="metric"><span class="label">SCCM Specialist</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">Vendor PS Days</span><span class="value">15–30</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>⚠️ Common Pitfalls</h4>
+        <div class="metric"><span class="label">Brand Transition</span><span class="value text-orange">Monitor</span></div>
+        <div class="metric"><span class="label">Platform Overlap</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">Integration Maturity</span><span class="value text-orange">Medium</span></div>
+        <div class="metric"><span class="label">License Changes</span><span class="value text-orange">Watch</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>📊 Success Metrics</h4>
+        <div class="metric"><span class="label">Software Reclaim</span><span class="value text-green">$300K+/yr</span></div>
+        <div class="metric"><span class="label">Self-Healing Rate</span><span class="value">40–60%</span></div>
+        <div class="metric"><span class="label">Patch Compliance</span><span class="value">95%+</span></div>
+        <div class="metric"><span class="label">ROI Breakeven</span><span class="value">6–10 months</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tanium Tab -->
+  <div class="tab-content" id="tab-tanium">
+    <div class="impl-grid">
+      <div class="impl-card">
+        <h4>📅 Timeline</h4>
+        <div class="metric"><span class="label">Module Activation</span><span class="value">1–2 weeks*</span></div>
+        <div class="metric"><span class="label">Configuration</span><span class="value">2–4 weeks</span></div>
+        <div class="metric"><span class="label">Full DEX Rollout</span><span class="value">1–3 months</span></div>
+        <div class="metric"><span class="label">*If Tanium exists</span><span class="value text-green">Fastest</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>👥 Resources Required</h4>
+        <div class="metric"><span class="label">Tanium Admin</span><span class="value">1 FTE (existing)</span></div>
+        <div class="metric"><span class="label">DEX Config Lead</span><span class="value">0.5 FTE</span></div>
+        <div class="metric"><span class="label">Additional Hiring</span><span class="value">Minimal</span></div>
+        <div class="metric"><span class="label">Vendor PS Days</span><span class="value">5–10</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>⚠️ Common Pitfalls</h4>
+        <div class="metric"><span class="label">DEX Maturity</span><span class="value text-red">New Product</span></div>
+        <div class="metric"><span class="label">Feature Gaps</span><span class="value text-red">Significant</span></div>
+        <div class="metric"><span class="label">Platform Lock-in</span><span class="value text-orange">High</span></div>
+        <div class="metric"><span class="label">Analytics Depth</span><span class="value text-orange">Limited</span></div>
+      </div>
+      <div class="impl-card">
+        <h4>📊 Success Metrics</h4>
+        <div class="metric"><span class="label">Agent Consolidation</span><span class="value text-green">Immediate</span></div>
+        <div class="metric"><span class="label">Security + DEX</span><span class="value">Unified View</span></div>
+        <div class="metric"><span class="label">Scale</span><span class="value">500K+ EPs</span></div>
+        <div class="metric"><span class="label">ROI Breakeven</span><span class="value">3–6 months*</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== 5-YEAR ROADMAP ==================== -->
+<section id="roadmap">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Strategic Roadmap</span>
+    <h2>5-Year DEX Implementation Plan</h2>
+    <p>A phased approach to building a world-class Digital Employee Experience program aligned with enterprise IT maturity.</p>
+  </div>
+
+  <div class="timeline fade-in">
+    <!-- Year 1 -->
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:var(--bg);border-color:var(--accent)"></div>
+      <div class="timeline-card">
+        <div class="timeline-year text-accent">Year 1 — 2026</div>
+        <div class="timeline-title">Foundation & Discovery</div>
+        <ul>
+          <li><strong>Tool Selection & Procurement</strong> — RFP, POC with top 2–3 vendors, business case approval</li>
+          <li><strong>Agent Deployment Strategy</strong> — Phased rollout starting with pilot group (500–1,000 endpoints), then regional expansion</li>
+          <li><strong>Asset Discovery & Right-Sizing</strong> — Hardware inventory, software usage analysis, over/under-provisioned devices</li>
+          <li><strong>DEX Score Baselining</strong> — Establish initial DEX scores across all business units and geographies</li>
+          <li><strong>ServiceNow Integration</strong> — Bi-directional ITSM integration for ticket enrichment and auto-creation</li>
+          <li><strong>Quick Wins Campaign</strong> — Top 10 recurring issues identified and remediated (slow boot, disk space, outdated drivers)</li>
+          <li><strong>Governance Framework</strong> — DEX CoE (Center of Excellence) established, RACI defined, reporting cadence set</li>
+          <li><strong>Executive Dashboard</strong> — C-suite visibility into DEX health scores and trends</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Year 2 -->
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:var(--bg);border-color:var(--purple)"></div>
+      <div class="timeline-card">
+        <div class="timeline-year text-purple">Year 2 — 2027</div>
+        <div class="timeline-title">Optimization & Automation</div>
+        <ul>
+          <li><strong>Proactive Issue Detection</strong> — Pattern recognition for emerging issues before user impact</li>
+          <li><strong>Auto-Remediation Library</strong> — 50+ self-healing scripts for common issues (memory leaks, service restarts, cache clears)</li>
+          <li><strong>Service Desk Integration</strong> — L1/L2 technicians equipped with DEX data during ticket handling</li>
+          <li><strong>XLA Framework</strong> — Shift from SLAs to Experience Level Agreements measuring actual employee satisfaction</li>
+          <li><strong>Self-Healing Endpoints</strong> — Automated resolution for 40%+ of common endpoint issues</li>
+          <li><strong>Workflow Automation</strong> — ServiceNow workflow triggers based on DEX events</li>
+          <li><strong>Employee Engagement</strong> — Targeted surveys via DEX tool for ongoing sentiment measurement</li>
+          <li><strong>Application Performance</strong> — Deep monitoring of top 20 critical business applications</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Year 3 -->
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:var(--bg);border-color:var(--green)"></div>
+      <div class="timeline-card">
+        <div class="timeline-year text-green">Year 3 — 2028</div>
+        <div class="timeline-title">Expansion & Cross-Functional</div>
+        <ul>
+          <li><strong>Predictive Analytics</strong> — ML models predicting device failures, application crashes, and performance degradation</li>
+          <li><strong>Cybersecurity Integration</strong> — DEX data feeds into security posture scoring, threat detection, and compliance</li>
+          <li><strong>HR Onboarding/Offboarding</strong> — Day-1 experience monitoring, new-hire DEX tracking, exit device processing</li>
+          <li><strong>Application Rationalization</strong> — Data-driven decisions on app consolidation, license optimization, shadow IT detection</li>
+          <li><strong>Software Reclaim Program</strong> — Active license harvesting for unused software ($300K+ annual savings target)</li>
+          <li><strong>Regional Benchmarking</strong> — DEX score comparisons across sites, BUs, and roles</li>
+          <li><strong>Persona-Based Profiles</strong> — Tailored experience baselines for different employee personas (engineer, exec, frontline)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Year 4 -->
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:var(--bg);border-color:var(--orange)"></div>
+      <div class="timeline-card">
+        <div class="timeline-year text-orange">Year 4 — 2029</div>
+        <div class="timeline-title">Maturity & Intelligence</div>
+        <ul>
+          <li><strong>AI/ML-Driven Insights</strong> — Advanced analytics identifying root causes across complex multi-layer issues</li>
+          <li><strong>Cross-Functional DEX</strong> — Unified experience metrics spanning Cyber, HR, Facilities, and IT operations</li>
+          <li><strong>Business Outcome Correlation</strong> — Linking DEX scores to productivity, revenue, and employee retention metrics</li>
+          <li><strong>Board-Level Reporting</strong> — Executive dashboards connecting digital experience to business outcomes</li>
+          <li><strong>Agentic Remediation</strong> — AI agents autonomously diagnosing and resolving complex multi-step issues</li>
+          <li><strong>Digital Adoption Analytics</strong> — Measuring actual application adoption and proficiency across the workforce</li>
+          <li><strong>Carbon Footprint Tracking</strong> — Endpoint energy consumption and sustainability metrics</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Year 5 -->
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:var(--bg);border-color:var(--cyan)"></div>
+      <div class="timeline-card">
+        <div class="timeline-year text-cyan">Year 5 — 2030</div>
+        <div class="timeline-title">Innovation & Autonomy</div>
+        <ul>
+          <li><strong>Autonomous IT Operations</strong> — 70%+ of endpoint issues resolved without human intervention</li>
+          <li><strong>Full Experience-Driven IT</strong> — All IT decisions informed by employee experience data and business impact</li>
+          <li><strong>Industry Benchmarking</strong> — Cross-industry DEX comparisons via DXI and vendor networks</li>
+          <li><strong>Advanced Persona Management</strong> — Dynamic, AI-driven persona classification with auto-adjusting baselines</li>
+          <li><strong>Proactive Lifecycle Management</strong> — Predictive device replacement based on experience degradation trends</li>
+          <li><strong>DEX-Driven Budgeting</strong> — IT budget allocation informed by experience impact analysis</li>
+          <li><strong>Zero-Touch IT</strong> — Vision of frictionless technology experience from hire to retire</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== ROI & BUSINESS CASE ==================== -->
+<section id="roi" style="background:var(--bg2)">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Business Case</span>
+    <h2>ROI & Value Realization</h2>
+    <p>Data-driven projections for DEX investment returns based on Forrester TEI studies and industry benchmarks.</p>
+  </div>
+
+  <div class="grid-2 fade-in">
+    <!-- ROI Projection -->
+    <div class="card">
+      <h3 style="margin-bottom:1.5rem;font-size:1.1rem">Projected ROI — 50,000 Endpoints</h3>
+      <div class="impl-card" style="background:var(--bg3);border:none;padding:1.25rem;margin-bottom:1rem">
+        <div class="metric"><span class="label">Annual License Cost</span><span class="value">$750K–$1.5M</span></div>
+        <div class="metric"><span class="label">Implementation (Y1)</span><span class="value">$200K–$400K</span></div>
+        <div class="metric"><span class="label">Annual Staffing (2–3 FTE)</span><span class="value">$250K–$375K</span></div>
+      </div>
+      <h4 style="font-size:.85rem;color:var(--green2);margin-bottom:.75rem">Expected Returns (Annual)</h4>
+      <div class="impl-card" style="background:var(--green-bg);border-color:rgba(16,185,129,.2);padding:1.25rem">
+        <div class="metric"><span class="label">Ticket Reduction (30%)</span><span class="value text-green">$1.2M–$2M</span></div>
+        <div class="metric"><span class="label">Productivity Gains</span><span class="value text-green">$2M–$4M</span></div>
+        <div class="metric"><span class="label">Software Reclaim</span><span class="value text-green">$300K–$600K</span></div>
+        <div class="metric"><span class="label">Device Lifespan Extension</span><span class="value text-green">$500K–$1M</span></div>
+        <div class="metric"><span class="label">Reduced Escalations</span><span class="value text-green">$200K–$400K</span></div>
+        <div class="metric" style="border-top:2px solid var(--green);padding-top:.75rem;margin-top:.5rem"><span class="label" style="font-weight:700;color:var(--green2)">Total Annual Savings</span><span class="value text-green" style="font-size:1.1rem">$4.2M–$8M</span></div>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="card">
+      <h3 style="margin-bottom:1.5rem;font-size:1.1rem">Forrester TEI Key Findings</h3>
+      <div style="space-y:1rem">
+        <div class="impl-card" style="background:var(--bg3);border:none;padding:1.25rem;margin-bottom:1rem">
+          <h4 style="font-size:.9rem;margin-bottom:.75rem">📊 Nexthink TEI Study</h4>
+          <div class="metric"><span class="label">3-Year ROI</span><span class="value text-green">200%+</span></div>
+          <div class="metric"><span class="label">Savings per Endpoint</span><span class="value">$400+ (Year 1)</span></div>
+          <div class="metric"><span class="label">Payback Period</span><span class="value">&lt; 12 months</span></div>
+          <div class="metric"><span class="label">Ticket Volume Reduction</span><span class="value">30–42%</span></div>
+        </div>
+        <div class="impl-card" style="background:var(--bg3);border:none;padding:1.25rem;margin-bottom:1rem">
+          <h4 style="font-size:.9rem;margin-bottom:.75rem">📊 1E/TeamViewer TEI Study</h4>
+          <div class="metric"><span class="label">Software Reclaim</span><span class="value text-green">$2/machine/yr</span></div>
+          <div class="metric"><span class="label">Self-Healing Rate</span><span class="value">40–60%</span></div>
+          <div class="metric"><span class="label">Patch Compliance</span><span class="value">95%+ achieved</span></div>
+        </div>
+        <div class="impl-card" style="background:var(--bg3);border:none;padding:1.25rem">
+          <h4 style="font-size:.9rem;margin-bottom:.75rem">📊 Industry Averages</h4>
+          <div class="metric"><span class="label">Avg IT Ticket Cost</span><span class="value">$15–25</span></div>
+          <div class="metric"><span class="label">Employee Downtime/Yr</span><span class="value">29 hours</span></div>
+          <div class="metric"><span class="label">MTTR Improvement</span><span class="value">3.2x faster</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- XLA vs SLA -->
+  <div class="card mt-4 fade-in">
+    <h3 style="margin-bottom:1.5rem;font-size:1.1rem;text-align:center">XLAs vs SLAs — The Paradigm Shift</h3>
+    <div class="table-wrapper" style="border:none">
+      <table class="comp-table" style="min-width:600px">
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Traditional SLAs</th>
+            <th>Experience Level Agreements (XLAs)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="feature-name">Focus</td><td>Technical performance metrics</td><td>Actual employee experience & satisfaction</td></tr>
+          <tr><td class="feature-name">Measures</td><td>Uptime, response time, availability</td><td>Usability, responsiveness, emotional response</td></tr>
+          <tr><td class="feature-name">Perspective</td><td>IT infrastructure view</td><td>Employee/end-user view</td></tr>
+          <tr><td class="feature-name">Success Criteria</td><td>"99.9% uptime achieved"</td><td>"92% of employees rate IT experience as Good+"</td></tr>
+          <tr><td class="feature-name">Failure Mode</td><td>SLA met but users frustrated</td><td>Experience measured holistically</td></tr>
+          <tr><td class="feature-name">Data Sources</td><td>System monitoring tools</td><td>DEX tools + sentiment + business outcomes</td></tr>
+          <tr><td class="feature-name">Business Alignment</td><td>Weak correlation to outcomes</td><td>Direct link to productivity & satisfaction</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== RECOMMENDATION ==================== -->
+<section id="recommendation">
+<div class="container">
+  <div class="section-header">
+    <span class="overline">Strategic Recommendation</span>
+    <h2>Recommendation for GE Aerospace</h2>
+    <p>Based on enterprise requirements, existing technology stack, and strategic alignment.</p>
+  </div>
+
+  <div class="card fade-in" style="border-color:var(--accent);background:linear-gradient(135deg,var(--surface),var(--bg3))">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <div class="tool-icon" style="background:linear-gradient(135deg,#0066cc,#00aaff);width:64px;height:64px;font-size:1.8rem">N</div>
+      <div>
+        <h3 style="font-size:1.5rem">Primary: Nexthink</h3>
+        <p style="color:var(--text2)">The market leader with the deepest analytics, strongest ServiceNow integration, and proven enterprise-scale deployments.</p>
+      </div>
+    </div>
+
+    <div class="grid-2 mt-3">
+      <div>
+        <h4 style="color:var(--green2);margin-bottom:.75rem">Why Nexthink for GE Aerospace</h4>
+        <ul style="list-style:none;padding:0">
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--green2)">✓</span> #1 in all Gartner Critical Capabilities use cases</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--green2)">✓</span> Best-in-class ServiceNow integration (critical for existing ITSM)</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--green2)">✓</span> Proven at enterprises with 100K+ endpoints</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--green2)">✓</span> Strong DEX scoring (V3) with executive dashboards</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--green2)">✓</span> Largest customer community for knowledge sharing</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--green2)">✓</span> Forrester TEI validates 200%+ ROI</li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="color:var(--orange2);margin-bottom:.75rem">Also Evaluate (Short List)</h4>
+        <ul style="list-style:none;padding:0">
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--orange2)">→</span> <strong>Lakeside SysTrack</strong> — If deep historical analytics and VDI optimization are priority. Strongest data granularity.</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--orange2)">→</span> <strong>Tanium DEX</strong> — If already heavily invested in Tanium for security. Lowest incremental cost but least mature DEX.</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2)"><span style="position:absolute;left:0;color:var(--orange2)">→</span> <strong>ControlUp</strong> — If fastest time-to-value and VDI/DaaS are primary concerns. Best customer satisfaction scores.</li>
+        </ul>
+        <h4 style="color:var(--text3);margin-top:1.25rem;margin-bottom:.75rem">Next Steps</h4>
+        <ul style="list-style:none;padding:0">
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2);font-size:.9rem"><span style="position:absolute;left:0;color:var(--accent2)">1.</span> Schedule vendor briefings (Nexthink, Lakeside, ControlUp)</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2);font-size:.9rem"><span style="position:absolute;left:0;color:var(--accent2)">2.</span> Define POC success criteria aligned with GE Aerospace KPIs</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2);font-size:.9rem"><span style="position:absolute;left:0;color:var(--accent2)">3.</span> Build business case with projected ROI for leadership approval</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2);font-size:.9rem"><span style="position:absolute;left:0;color:var(--accent2)">4.</span> Identify pilot group (500–1,000 endpoints across 2–3 sites)</li>
+          <li style="padding-left:1.25rem;margin-bottom:.5rem;position:relative;color:var(--text2);font-size:.9rem"><span style="position:absolute;left:0;color:var(--accent2)">5.</span> Establish DEX Center of Excellence with Service Governance</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer>
+<div class="container">
+  <p style="margin-bottom:.5rem">DEX Implementation Roadmap — Service Governance | GE Aerospace</p>
+  <p>Prepared by the Digital Workplace Strategy Team — March 2026</p>
+  <p style="margin-top:.5rem;font-size:.75rem;color:var(--text3)">Sources: Gartner Magic Quadrant for DEX Management Tools (May 2025), Gartner Critical Capabilities for DEX (2025), Forrester TEI Studies, Vendor Documentation, Industry Reports. All Gartner references are trademarks of Gartner, Inc.</p>
+</div>
+</footer>
+
+<!-- ==================== SCRIPTS ==================== -->
+<script>
+// Scroll nav shadow
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Active nav link
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 200) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+
+// Tab switching
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Fade in on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Close mobile nav on link click
+document.querySelectorAll('.nav-links a').forEach(a => {
+  a.addEventListener('click', () => {
+    document.querySelector('.nav-links').classList.remove('open');
+  });
+});
+</script>
+
+</body>
+</html>
